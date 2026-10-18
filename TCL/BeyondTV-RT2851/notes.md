@@ -34,6 +34,28 @@ adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief -a android.inte
 
 Record each candidate's `dumpsys package` **User 0** state before changing it. `enabled=0` means manifest/default state; `enabled=1` means explicitly enabled; `enabled=3` means disabled-user. Keep existing component overrides and previously disabled packages intact. A package disabled before this work is not counted as a task change.
 
+## Default launcher replacement
+
+**Verdict: worked with caveats on the tested Android 11 / V8-R851T02-LF1V715 (AR05) units.** Disabling the stock launcher at package level, after verifying a replacement was installed and usable, was decisive. Normal Home selection and accessibility alone were insufficient in the observed setup. This result does not establish compatibility with every replacement launcher or other TCL firmware.
+
+**What was tried:** the replacement was installed and opened, selected as Home, and its accessibility-based Home handling was investigated. The supported package-level command then changed `com.google.android.tvlauncher` from default (`0`) to disabled-user (`3`); no component-security bypass was used.
+
+**What was found:** a selected replacement or enabled accessibility setting alone did not establish reliable Home behavior. Unit A also showed an enabled accessibility service that was not bound at a recorded checkpoint. With the stock launcher disabled, the Home resolver and foreground checks reached the replacement.
+
+**Final observed result:** unit A's replacement Home and stock launcher disabled state survived the recorded AC power cycle; later package checks still returned to replacement Home, but no reboot after its final PartnerCustomizer/eSticker changes is confirmed. Unit B's Home navigation from Settings and Netflix succeeded, and its replacement Home plus bound accessibility service persisted after one normal reboot covering all 26 package disables.
+
+The relevant command pattern is shown below for an already installed and verified replacement. Substitute its actual component for `<REPLACEMENT_HOME_COMPONENT>`; do not paste the placeholder literally. Verify that the replacement activity is actually visible, not merely a permission prompt behind a successful launch status.
+
+```sh
+adb -s '<TV_IP>:5555' shell am start -n '<REPLACEMENT_HOME_COMPONENT>'
+adb -s '<TV_IP>:5555' shell cmd package set-home-activity --user 0 '<REPLACEMENT_HOME_COMPONENT>'
+adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.google.android.tvlauncher
+adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
+adb -s '<TV_IP>:5555' shell input keyevent KEYCODE_HOME
+```
+
+Confirm the resulting screen and physical remote Home behavior. The stock Home rollback commands below restore its recorded default state before selecting and opening it.
+
 ## Completed package changes
 
 The following 26 packages were changed from default state (`0`) to disabled-user (`3`) on **both** units. Purpose labels describe the affected feature areas, not proof that every component of a package has only that function. Disable only features you do not use; in particular, retain accessibility, voice, casting, and remote services when needed.
