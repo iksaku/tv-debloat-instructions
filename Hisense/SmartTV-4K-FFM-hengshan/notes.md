@@ -1,6 +1,6 @@
 # Hisense SmartTV 4K FFM / hengshan platform
 
-Completed investigation and partial cleanup results recorded on 2026-10-18. This is a platform identifier from ADB, **not a confirmed retail model**. These notes describe the completed two-package cleanup and launcher investigation checkpoint; they do not declare the entire TV setup complete.
+Completed investigation and partial cleanup results recorded on 2026-10-18. This is a platform identifier from ADB, **not a confirmed retail model**. These notes describe the completed four-package cleanup and launcher investigation checkpoint; they do not declare the entire TV setup complete.
 
 ## Device identity and connection
 
@@ -103,11 +103,15 @@ State `0` means manifest/default state, `1` explicitly enabled, and `3` disabled
 | --- | --- | --- | --- |
 | ACR service | `com.vt.tv.evservice` | 0 → 3 | `pm default-state --user 0 com.vt.tv.evservice` |
 | Google feedback | `com.google.android.feedback` | 0 → 3 | `pm default-state --user 0 com.google.android.feedback` |
+| Hisense Channels streaming / search / dedicated-button integration | `net.vidaatv.hisense.android.tv` | 0 → 3 | `pm default-state --user 0 net.vidaatv.hisense.android.tv` |
+| Alexa TV control / setup | `com.vt.alexa` | 0 → 3 | `pm default-state --user 0 com.vt.alexa` |
 | Restore YouTube access | `com.google.android.youtube.tv` | 3 → 1 | `pm disable-user --user 0 com.google.android.youtube.tv` |
 | Restore Prime Video access | `com.amazon.amazonvideo.livingroom` | 3 → 1 | `pm disable-user --user 0 com.amazon.amazonvideo.livingroom` |
 | Restore Disney+ access | `com.disney.disneyplus` | 3 → 1 | `pm disable-user --user 0 com.disney.disneyplus` |
 
-Netflix (`com.netflix.ninja`) remained enabled. Restoring the original state of the three streaming apps means disabling them again, not resetting their data. The only optional-package disables claimed at this checkpoint are ACR and Google feedback.
+Netflix (`com.netflix.ninja`) remained enabled. Restoring the original state of the three streaming apps means disabling them again, not resetting their data. The four confirmed optional-package disables are ACR, Google feedback, Hisense Channels and Alexa. Channels and Alexa were tested individually after the earlier two-package cleanup.
+
+Disabling Channels removes its streaming service and related search/button integration; disabling Alexa removes its TV voice-control/setup feature. The [official exact-package Channels listing](https://play.google.com/store/apps/details?id=net.vidaatv.hisense.android.tv) describes advertising-supported live and on-demand streaming. The [Hisense Alexa guide](https://assets.hisense-usa.com/assets/ProductDownloads/46/3d89c6aa49/How-to-set-up-Amazon-Alexa-on-Hisense-TVs_0.pdf) corroborates the general TV-control role on older models, not this exact firmware. Local package metadata identified the installed packages; neither source establishes a universal safe-disable recommendation.
 
 For one reviewed package at a time, prepend `adb -s '<TV_IP>:5555' shell` to a rollback command in the table. Examples of the completed changes and inspection:
 
@@ -115,6 +119,8 @@ For one reviewed package at a time, prepend `adb -s '<TV_IP>:5555' shell` to a r
 adb -s '<TV_IP>:5555' shell dumpsys package com.vt.tv.evservice
 adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.vt.tv.evservice
 adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.google.android.feedback
+adb -s '<TV_IP>:5555' shell pm disable-user --user 0 net.vidaatv.hisense.android.tv
+adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.vt.alexa
 adb -s '<TV_IP>:5555' shell pm enable --user 0 com.google.android.youtube.tv
 adb -s '<TV_IP>:5555' shell pm enable --user 0 com.amazon.amazonvideo.livingroom
 adb -s '<TV_IP>:5555' shell pm enable --user 0 com.disney.disneyplus
@@ -123,8 +129,10 @@ adb -s '<TV_IP>:5555' shell pm list packages -d --user 0
 
 ## Preserved functionality and verification limits
 
-AirPlay package states were preserved exactly: `com.mediatek.AirplayAPK=1`, `com.mediatek.airplaydaemon=0`, `com.mediatek.partner.airplay_sys=0`, and `com.vt.tv.airplaykeycheck=0`. AirPlay system/daemon services were observed after the changes and reboot. DLNA, SyncPlay, AIOT, native audio/input/network services and DRM support were retained. No broader optional-package cleanup is claimed in this checkpoint.
+AirPlay package states were preserved exactly: `com.mediatek.AirplayAPK=1`, `com.mediatek.airplaydaemon=0`, `com.mediatek.partner.airplay_sys=0`, and `com.vt.tv.airplaykeycheck=0`. AirPlay system/daemon services were observed after the changes and reboot. DLNA, SyncPlay, AIOT, native audio/input/network services and DRM support were retained. Stock launcher, Setup Wizard and Settings remained at default state; Home still resolved to Vanilla. No additional optional-package changes beyond the four listed disables are claimed.
 
-YouTube, Prime Video and Disney+ returned successful launch status before and after the two-package disable batch; Netflix and Settings also launched. One normal reboot verified persistence of the two disables, streaming-app enabled states, preserved AirPlay states and bound accessibility. Core audio, input, TV, Settings and remote services were observed; these process checks are not full functional tests.
+YouTube, Prime Video and Disney+ returned successful launch status before and after the two-package disable batch; Netflix and Settings also launched. One normal reboot verified persistence of the earlier ACR and feedback disables, streaming-app enabled states, preserved AirPlay states and bound accessibility. Core audio, input, TV, Settings and remote services were observed; these process checks are not full functional tests.
+
+After each later Channels/Alexa disable, Netflix, YouTube, Prime Video and Disney+ launched successfully. An explicit Settings activity launch reported a stock-launcher account-verification activity; the normal `android.settings.SETTINGS` action then reached MainSettings, confirmed in the foreground. No login or provisioning action was performed, and the cause of that transient activity is unestablished. AirPlay services remained running, ADB stayed responsive, and HDMI/eARC, audio, input, remote, Wi-Fi and DRM services/endpoints were present. **The latest Channels and Alexa disables have no reboot persistence or standby/wake retest.**
 
 Physical Home failure was user-confirmed, but authenticated streaming playback, audio, HDMI switching, and AirPlay discovery/streaming were not comprehensively verified in this checkpoint. No measured speedup, removal of all tracking/ads, or elimination of all background processes is claimed. No package uninstall or data clear was performed.
