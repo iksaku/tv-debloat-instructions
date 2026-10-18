@@ -28,7 +28,7 @@ adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief -a android.inte
 
 ## Default launcher replacement
 
-**Verdict: not achieved by the tested methods on this Android 12 / 00.00.00.132 firmware in Basic TV mode.** A replacement could be launched directly, but Home continued to select stock Vanilla Home. This is a bounded test result, not a claim that replacement is universally impossible.
+**Verdict: not achieved by the tested methods on this Android 12 / 00.00.00.132 firmware in Basic TV mode.** A replacement could be launched directly, but Home continued to select stock Vanilla Home. The replacement was subsequently removed for user 0, and stock Home was explicitly selected. This is a bounded test result, not a claim that replacement is universally impossible.
 
 ### What was tried
 
@@ -45,7 +45,7 @@ The whole-package trial's preflight also returned a successful start status whil
 
 ### What was found
 
-The observed Home candidates were:
+During the investigation, before removal of the replacement, the observed Home candidates were:
 
 | Component | Priority / state |
 | --- | --- |
@@ -60,7 +60,7 @@ The stock package also contains dashboard, profiles, media controls, input/boot 
 
 ### Final observed result and reproducible diagnostics
 
-Stock `com.google.android.apps.tv.launcherx` was restored to **default (`enabled=0`)**, preserving its existing component overrides. Vanilla Home opened successfully after rollback; ADB and Settings remained usable. Setup Wizard was not disabled. No root, reset, provisioning edits, or component-security bypass was used. The replacement remained directly launchable, but reliable default Home takeover was not achieved.
+Stock `com.google.android.apps.tv.launcherx` was restored to **default (`enabled=0`)**, preserving its existing component overrides. Vanilla Home opened successfully after rollback; ADB and Settings remained usable. Setup Wizard was not disabled. No root, reset, provisioning edits, or component-security bypass was used. Reliable default Home takeover was not achieved. At the user's request, the replacement was then removed for user 0 using a keep-data uninstall; stock Vanilla Home is now the HOME-role holder and launches successfully.
 
 The normal-selection and explicit-Home diagnostic patterns were:
 
@@ -79,13 +79,23 @@ adb -s '<TV_IP>:5555' shell pm default-state --user 0 com.google.android.apps.tv
 adb -s '<TV_IP>:5555' shell am start -n com.google.android.apps.tv.launcherx/.home.VanillaModeHomeActivity
 ```
 
-To restore the stored stock Home preference as well, after restoring the package:
+After restoring the stock package, its Home preference was explicitly selected before removing the replacement:
 
 ```sh
 adb -s '<TV_IP>:5555' shell cmd package set-home-activity --user 0 com.google.android.apps.tv.launcherx/.home.VanillaModeHomeActivity
 ```
 
-That last command is a rollback instruction, not a claim that the recorded replacement role was removed. User-enabled accessibility can be turned off manually if reverting the replacement's Home handling. Do not disable every Home handler or Setup Wizard to force the resolver to choose a replacement.
+The completed removal used the following pattern, with the installed replacement's actual package substituted:
+
+```sh
+adb -s '<TV_IP>:5555' shell pm uninstall -k --user 0 '<REPLACEMENT_PACKAGE>'
+```
+
+The command returned success. The installed-package listing excluded the replacement and its launcher activity no longer resolved for user 0. A retained package record remained visible with the include-uninstalled query; OEM metadata also retained an inconsistent installed flag. Installed-package availability and activity resolution established the removal outcome. The `-k` option requested data retention, but data bytes were not independently inspected or backed up.
+
+Stock Home launched after removal, and the normal Settings action reached MainSettings. The four debloat disables and AirPlay package/service states were unchanged. **No reboot followed the removal.** Do not disable every Home handler or Setup Wizard to force the resolver to choose a replacement.
+
+Removal rollback, not executed: reinstall a verified APK with the same signing identity using `adb -s '<TV_IP>:5555' install -r '<VERIFIED_REPLACEMENT_APK>'`. Retained data may be reused; permissions, accessibility and Home selection require deliberate review rather than automatic re-enablement.
 
 ### External evidence, separate from our tests
 
@@ -135,4 +145,4 @@ YouTube, Prime Video and Disney+ returned successful launch status before and af
 
 After each later Channels/Alexa disable, Netflix, YouTube, Prime Video and Disney+ launched successfully. An explicit Settings activity launch reported a stock-launcher account-verification activity; the normal `android.settings.SETTINGS` action then reached MainSettings, confirmed in the foreground. No login or provisioning action was performed, and the cause of that transient activity is unestablished. AirPlay services remained running, ADB stayed responsive, and HDMI/eARC, audio, input, remote, Wi-Fi and DRM services/endpoints were present. **The latest Channels and Alexa disables have no reboot persistence or standby/wake retest.**
 
-Physical Home failure was user-confirmed, but authenticated streaming playback, audio, HDMI switching, and AirPlay discovery/streaming were not comprehensively verified in this checkpoint. No measured speedup, removal of all tracking/ads, or elimination of all background processes is claimed. No package uninstall or data clear was performed.
+Physical Home failure was user-confirmed, but authenticated streaming playback, audio, HDMI switching, and AirPlay discovery/streaming were not comprehensively verified in this checkpoint. No measured speedup, removal of all tracking/ads, or elimination of all background processes is claimed. The debloat changes used disable-user without uninstall or data clear. The replacement launcher alone was subsequently uninstalled for user 0 with the keep-data option, as documented above.
