@@ -36,6 +36,20 @@ AT4K was the tested launcher, not a required choice. These package steps describ
 
 Keep Android Settings (`com.android.tv.settings`) and its fallback Home enabled. Google TV Home also supplies dashboard, profile, media-control and other integrations. Setup Wizard handles setup/recovery, not just Home: disabling it may remove app-owned Wi-Fi configuration and cut off network ADB. Plan local network recovery before proceeding; this is not a universal safe-disable recipe.
 
+### Remote-button tradeoffs
+
+The user reported these physical-remote behaviors with the custom-launcher configuration on this unit:
+
+| Remote button / function | Reported behavior |
+| --- | --- |
+| Gear / settings button | No longer opens the floating quick-settings panel for Wi-Fi, Bluetooth and other general settings. |
+| Menu button | Still opens the separate picture/sound quick settings, including picture mode and sound mode. |
+| Input switcher and number input | Continue working. |
+| Netflix and favorite shortcut | Continue working. |
+| YouTube, Prime Video, Disney+ and Tubi quick-access buttons | Appear to no longer launch their targets. |
+
+These observations concern remote shortcuts and menu entry points, not whether the underlying apps or connectivity features work. Android Settings remains enabled separately from the missing floating panel. Account for these tradeoffs before disabling the competing Home packages; use the [stock Home rollback](#roll-back-to-stock-home) to revert the launcher package changes.
+
 ### Install and select a custom launcher
 
 Install a verified APK from the chosen launcher's trusted distribution source, compatible with Android 12 and this TV's 32-bit ARM ABI. Skip installation if your chosen launcher is already installed. List its available Home activity:
@@ -71,7 +85,7 @@ adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.google.android.tungsten
 adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.HOME
 ```
 
-The resolver should now select your custom Home component. From Settings, test the physical remote's Home button and volume holds; also check networking and the TV functions you use. Verify persistence after reboot/wake separately rather than assuming an immediate Home test covers it. If routing or required features fail, use the rollback below.
+The resolver should now select your custom Home component. From Settings, test the physical remote's Home button and volume holds, and check the [other remote buttons](#remote-button-tradeoffs), networking and TV functions you use. Verify persistence after reboot/wake separately rather than assuming an immediate Home test covers it. If routing or required features fail, use the rollback below.
 
 ### Roll back to stock Home
 

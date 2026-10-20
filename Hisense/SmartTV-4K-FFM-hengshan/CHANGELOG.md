@@ -2,6 +2,12 @@
 
 Changes and discoveries for Android 12 / firmware `00.00.00.132` in Basic TV mode. Use the [cleanup reference](notes.md) for package names, commands and rollback.
 
+## 2026-10-20 — Remote shortcuts with custom Home
+
+- The user reported that the remote's gear/settings button no longer opens the floating Wi-Fi/Bluetooth/general quick-settings panel. The separate Menu-button picture/sound settings, input switcher, number input, Netflix button and favorite shortcut still work.
+- YouTube, Prime Video, Disney+ and Tubi quick-access buttons appear to no longer work, according to the user. This reports shortcut behavior, not failure of the apps themselves; these buttons were not independently reproduced through ADB.
+- Recorded these tradeoffs in the launcher reference. The responsible package or component has not been isolated by rollback testing; the observations apply to the current configuration, with both Google TV Home and Setup Wizard disabled alongside the earlier cleanup. No TV settings or package states changed for this documentation update.
+
 ## 2026-10-20 — Launcher-independent instructions
 
 - Rewrote the launcher reference as install/select, disable both competing Home packages, verify, and rollback steps using the reader's chosen Home component. AT4K remains the tested example, not a required launcher; its recorded accessibility settings are not presented as universal prerequisites.
