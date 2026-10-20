@@ -1,8 +1,8 @@
 # Hisense SmartTV 4K FFM / hengshan platform
 
-Starting-point reference for the tested firmware: 32 optional packages disabled, screensaver off, and stock Vanilla Home retained. This is a platform identifier from ADB, **not a confirmed retail model**. Disable only features you do not use; these instructions are not a universal safe-disable list.
+Starting-point reference for the tested firmware: 32 optional packages disabled, screensaver off, and a custom launcher selected for native Home routing with two competing Home packages disabled. This is a platform identifier from ADB, **not a confirmed retail model**. Disable only features you do not use; these instructions are not a universal safe-disable list.
 
-Go to [disabled services](#disabled-services), [screensaver settings](#screensaver-setting), or [streaming apps](#streaming-apps) for commands and rollback. The [changelog](CHANGELOG.md) records changes and discoveries separately.
+Go to [launcher replacement](#default-launcher-replacement), [disabled services](#disabled-services), [screensaver settings](#screensaver-setting), or [streaming apps](#streaming-apps) for commands and rollback. The [changelog](CHANGELOG.md) records changes and discoveries separately.
 
 ## Device identity and connection
 
@@ -30,82 +30,75 @@ adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief -a android.inte
 
 ## Default launcher replacement
 
-**Verdict: not achieved by the tested methods on this Android 12 / 00.00.00.132 firmware in Basic TV mode.** A replacement could be launched directly, but Home continued to select stock Vanilla Home. The replacement was subsequently removed for user 0, and stock Home was explicitly selected. This is a bounded test result, not a claim that replacement is universally impossible.
+Use a compatible custom TV launcher of your choice. On this tested Android 12 firmware in Basic TV mode, native Home replacement required installing and selecting the custom launcher, then disabling **both Google TV Home and Setup Wizard**. Selecting a preferred Home alone was insufficient; disabling only Google TV Home exposed Setup Wizard's Recovery activity instead of the replacement.
 
-### What was tried
+AT4K was the tested launcher, not a required choice. These package steps describe this firmware's Home routing; they do not certify every launcher or other firmware. See the [changelog](CHANGELOG.md) for test results and limits.
 
-| Method | Observed result |
-| --- | --- |
-| Normal Home preference / HOME role selection | The replacement was stored as the preferred Home and HOME-role holder; the normal default-app screen showed it selected. Home still chose Vanilla. |
-| User-enabled accessibility | The replacement's service was enabled, bound, running, and reported active controls. Injected Home from Settings and YouTube still returned to Vanilla. The user also confirmed the same outcome with physical remote Home. |
-| One normal reboot | A new boot and completed startup were verified. Home role and bound accessibility persisted, but Home still selected Vanilla. |
-| Individual Vanilla component disable | Android rejected the shell operation with `SecurityException`; no component state changed. |
-| Whole `com.google.android.apps.tv.launcherx` package disable | The supported package operation succeeded, but Home resolution promoted Setup Wizard's `RecoveryActivity`, not the replacement. The package was immediately restored to its exact original default state. No Home key or Setup Wizard launch was requested while stock was disabled. |
-| Explicit `MAIN` + `HOME` launch of replacement | The replacement task became `type=home`, but foreground was a permission activity, and the next Home key still resumed Vanilla. No permission was granted or denied in that diagnostic. |
+Keep Android Settings (`com.android.tv.settings`) and its fallback Home enabled. Google TV Home also supplies dashboard, profile, media-control and other integrations. Setup Wizard handles setup/recovery, not just Home: disabling it may remove app-owned Wi-Fi configuration and cut off network ADB. Plan local network recovery before proceeding; this is not a universal safe-disable recipe.
 
-The whole-package trial's preflight also returned a successful start status while a permission activity was foreground. Earlier direct rendering of the replacement had been verified, but that preflight was not fresh confirmation of its visible Home screen.
+### Install and select a custom launcher
 
-### What was found
-
-During the investigation, before removal of the replacement, the observed Home candidates were:
-
-| Component | Priority / state |
-| --- | --- |
-| `com.google.android.apps.tv.launcherx/.home.VanillaModeHomeActivity` | 2; component explicitly enabled, package default |
-| `com.google.android.tungsten.setupwraith/.RecoveryActivity` | 1; component explicitly enabled, package default |
-| `<REPLACEMENT_HOME_COMPONENT>` | 0; enabled |
-| `com.android.tv.settings/.system.FallbackHome` | -1000; enabled |
-
-The normal Google TV Home component and Setup Wizard's higher-priority `MainActivity` were disabled at baseline. The three recorded provisioning flags were already `1`; an unset general setup-completion flag did not explain this result. The enabled Recovery activity remained above the replacement when Vanilla was removed from resolution.
-
-The stock package also contains dashboard, profiles, media controls, input/boot hooks and sleep-timer functions. Setup Wizard contains deferred setup and other system integration, not just a Home candidate. Neither package is an isolated recommendation feature. Completing full Google TV setup was not tested as a launcher fix, and its effect on these priorities is not established.
-
-### Final observed result and reproducible diagnostics
-
-Stock `com.google.android.apps.tv.launcherx` was restored to **default (`enabled=0`)**, preserving its existing component overrides. Vanilla Home opened successfully after rollback; ADB and Settings remained usable. Setup Wizard was not disabled. No root, reset, provisioning edits, or component-security bypass was used. Reliable default Home takeover was not achieved. At the user's request, the replacement was then removed for user 0 using a keep-data uninstall; stock Vanilla Home is now the HOME-role holder and launches successfully.
-
-The normal-selection and explicit-Home diagnostic patterns were:
+Install a verified APK from the chosen launcher's trusted distribution source, compatible with Android 12 and this TV's 32-bit ARM ABI. Skip installation if your chosen launcher is already installed. List its available Home activity:
 
 ```sh
-# Substitute the installed replacement's actual component.
+adb -s '<TV_IP>:5555' install -r --user 0 '<VERIFIED_REPLACEMENT_APK>'
+adb -s '<TV_IP>:5555' shell cmd package query-activities --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.HOME
+```
+
+Substitute the chosen launcher's actual `package/activity` from that list for `<REPLACEMENT_HOME_COMPONENT>` below. Open it and confirm its Home screen is usable, not merely a permission prompt behind a successful launch status, before selecting it:
+
+```sh
+adb -s '<TV_IP>:5555' shell am start --user 0 -n '<REPLACEMENT_HOME_COMPONENT>'
 adb -s '<TV_IP>:5555' shell cmd package set-home-activity --user 0 '<REPLACEMENT_HOME_COMPONENT>'
-adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
-adb -s '<TV_IP>:5555' shell am start -a android.intent.action.MAIN -c android.intent.category.HOME -n '<REPLACEMENT_HOME_COMPONENT>'
-adb -s '<TV_IP>:5555' shell input keyevent KEYCODE_HOME
 ```
 
-These failed to establish replacement Home here. The historical whole-package trial used `pm disable-user --user 0 com.google.android.apps.tv.launcherx`; it is not a recommended fix. Its exact rollback was:
+Turn off optional enhanced Home-key interception if previously enabled. The tested native-routing configuration leaves AT4K's **Enhanced home detection** off; enabling it broke volume-hold repetition. Accessibility permissions and other launcher-specific settings are separate from these package steps; approve any needed accessibility service deliberately on the TV rather than through ADB.
+
+### Disable the two competing Home packages
+
+Record each package's User 0 state before changing it. On the tested unit, both changed from default (`0`) to disabled-user (`3`), with their individual component overrides unchanged. These are whole-package disables, separate from the 32 optional-service disables below; no uninstall or data clear is required.
+
+| Package | Recorded change | Exact package-state rollback |
+| --- | --- | --- |
+| `com.google.android.apps.tv.launcherx` | 0 → 3 | `pm default-state --user 0 com.google.android.apps.tv.launcherx` |
+| `com.google.android.tungsten.setupwraith` | 0 → 3 | `pm default-state --user 0 com.google.android.tungsten.setupwraith` |
 
 ```sh
+adb -s '<TV_IP>:5555' shell dumpsys package com.google.android.apps.tv.launcherx
+adb -s '<TV_IP>:5555' shell dumpsys package com.google.android.tungsten.setupwraith
+adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.google.android.apps.tv.launcherx
+adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
+adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.HOME
+```
+
+The resolver should now select your custom Home component. From Settings, test the physical remote's Home button and volume holds; also check networking and the TV functions you use. Verify persistence after reboot/wake separately rather than assuming an immediate Home test covers it. If routing or required features fail, use the rollback below.
+
+### Roll back to stock Home
+
+Turn off any custom-launcher Home override you enabled so it cannot redirect Home during rollback. Restore both packages to their recorded default state before selecting stock Home; do not substitute `pm enable` for `pm default-state`.
+
+```sh
+adb -s '<TV_IP>:5555' shell pm default-state --user 0 com.google.android.tungsten.setupwraith
 adb -s '<TV_IP>:5555' shell pm default-state --user 0 com.google.android.apps.tv.launcherx
-adb -s '<TV_IP>:5555' shell am start -n com.google.android.apps.tv.launcherx/.home.VanillaModeHomeActivity
-```
-
-After restoring the stock package, its Home preference was explicitly selected before removing the replacement:
-
-```sh
 adb -s '<TV_IP>:5555' shell cmd package set-home-activity --user 0 com.google.android.apps.tv.launcherx/.home.VanillaModeHomeActivity
+adb -s '<TV_IP>:5555' shell am start --user 0 -n com.google.android.apps.tv.launcherx/.home.VanillaModeHomeActivity
 ```
 
-The completed removal used the following pattern, with the installed replacement's actual package substituted:
+Verify physical Home returns to stock before removing a replacement launcher. Uninstalling it or clearing its data is not required for rollback. Restoring packages does not guarantee restoration of any network configuration removed during disabling.
 
-```sh
-adb -s '<TV_IP>:5555' shell pm uninstall -k --user 0 '<REPLACEMENT_PACKAGE>'
-```
+### Tested launcher example, not a requirement
 
-The command returned success. The installed-package listing excluded the replacement and its launcher activity no longer resolved for user 0. A retained package record remained visible with the include-uninstalled query; OEM metadata also retained an inconsistent installed flag. Installed-package availability and activity resolution established the removal outcome. The `-k` option requested data retention, but data bytes were not independently inspected or backed up.
+The verified example used AT4K Launcher 1.2 (version code `19`, package `com.overdevs.at4k`, Home component `com.overdevs.at4k/.MainActivity`). Physical Home and volume-down holds worked with both competing packages disabled. These app-specific settings record that example; they are not prerequisites for every custom launcher.
 
-Stock Home launched after removal, and the normal Settings action reached MainSettings. The four debloat disables and AirPlay package/service states were unchanged. **No reboot followed the removal.** Do not disable every Home handler or Setup Wizard to force the resolver to choose a replacement.
+| AT4K setting | Original value | Recorded current value |
+| --- | --- | --- |
+| Accessibility service (`com.overdevs.at4k/com.overdevs.at4k.Hra`) | Off | On, manually approved on the TV |
+| Settings → Controls → Override Current Launcher | Off | On |
+| Settings → Controls → Enhanced home detection | Off | Off |
+| Settings → Controls → Start on boot | Off | Off |
+| Settings → Controls → Override back button exit | On | On |
 
-Removal rollback, not executed: reinstall a verified APK with the same signing identity using `adb -s '<TV_IP>:5555' install -r '<VERIFIED_REPLACEMENT_APK>'`. Retained data may be reused; permissions, accessibility and Home selection require deliberate review rather than automatic re-enablement.
-
-### External evidence, separate from our tests
-
-- The [OpenCore TV migration audit](https://github.com/eponce00/OpenCore-TV/blob/main/docs/DEVICE_PROFILE_MIGRATION_AUDIT.md) reports a `SmartTV_4K_FFM` / `hengshan` device where disabling stock Home exposed Recovery, and disabling Setup Wizard was followed by network/ADB loss. Its firmware is unconfirmed; matching platform strings do not prove the same outcome or cause on this unit.
-- [Launcher issue #605](https://github.com/spocky/miproja1/issues/605) reports a temporary explicit `MAIN` + `HOME` workaround with a different launcher and device. Our corresponding diagnostic created a Home-type task but did not fix Home routing.
-- [Android 12 Wi-Fi service source](https://android.googlesource.com/platform/packages/modules/Wifi/+/refs/tags/android-mainline-12.0.0_r122/service/java/com/android/server/wifi/WifiServiceImpl.java) contains removal of app-owned network state when a creator app is disabled or removed. This is a possible mechanism, not a verified cause on this Hisense firmware. Limited local metadata did not establish Setup Wizard ownership of the saved network. The external network-loss report remains a risk signal, not a reproduced local failure.
-
-No third-party debloat code was run.
+To undo these app-specific changes, turn **Override Current Launcher** off and switch AT4K's accessibility service off manually in TV Settings. Leave the other values as shown, and use the package/Home rollback above to restore stock navigation. Accessibility remaining enabled in the successful test does not establish that other launchers require it; the native Home resolver itself selected the custom activity.
 
 ## Disabled services
 
@@ -200,8 +193,8 @@ Netflix (`com.netflix.ninja`) remains enabled.
 
 ## Packages left unchanged
 
-Keep stock Home, Setup Wizard, Settings, System UI, Play Services/GSF, keyboard, Bluetooth/Wi-Fi, shared Google WebView, TV/input/audio/DRM services and TV/remote firmware updates outside this disable list. The mixed-function `com.vt.tv.smartsense` and `com.vt.tv.smartservice` packages remain enabled; they are distinct from the disabled storage-prompt UI.
+Keep Settings, System UI, Play Services/GSF, keyboard, Bluetooth/Wi-Fi, shared Google WebView, TV/input/audio/DRM services and TV/remote firmware updates outside this disable list. Stock Home and Setup Wizard are handled separately in the [launcher replacement steps](#default-launcher-replacement). The mixed-function `com.vt.tv.smartsense` and `com.vt.tv.smartservice` packages remain enabled; they are distinct from the disabled storage-prompt UI.
 
 AirPlay and its key-provisioning package states were left unchanged: `com.mediatek.AirplayAPK=1`, `com.mediatek.airplaydaemon=0`, `com.mediatek.partner.airplay_sys=0`, `com.vt.tv.airplaykeycheck=0`, and `com.vt.edv.drmp=0`. Disabling `com.vt.tv.mobiledeviceconnectiontips` also removes an AirPlay-related entry screen; retaining the core packages does not establish that every AirPlay workflow remains available.
 
-The recorded configuration has 38 disabled packages: the 32 listed services plus six preexisting disables outside this cleanup: `com.android.providers.calendar`, `com.android.vending`, `com.hisense.odinbrowser`, `com.mediatek.dtv.tvinput.dvbtuner`, `com.mediatek.dtv.tvinput.isdbtuner`, and `com.mediatek.tis`. Leave these preexisting states alone when rolling back the changes above.
+The recorded configuration has 40 disabled packages: the 32 listed services, the two competing Home packages, and six preexisting disables outside this cleanup: `com.android.providers.calendar`, `com.android.vending`, `com.hisense.odinbrowser`, `com.mediatek.dtv.tvinput.dvbtuner`, `com.mediatek.dtv.tvinput.isdbtuner`, and `com.mediatek.tis`. Leave these preexisting states alone when rolling back the changes above.
