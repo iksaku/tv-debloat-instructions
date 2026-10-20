@@ -1,6 +1,8 @@
 # TCL BeyondTV / RT2851 platform
 
-Verified observations from two anonymized units, A and B, on 2026-10-18. **BeyondTV-RT2851 is a platform directory, not a confirmed retail model.** Matching firmware does not establish identical retail hardware or guarantee the same results.
+Cleanup reference for two tested units, A and B: 26 common package disables, screensaver off, a Netflix background restriction and replacement Home. **BeyondTV-RT2851 is a platform directory, not a confirmed retail model.** Matching firmware does not establish identical retail hardware or guarantee the same results. Disable only features you do not use.
+
+The [three additional optional packages](#additional-optional-packages-on-one-reviewed-unit) apply to one reviewed unit, not both. See [settings and rollback](#additional-settings), [verification limits](#verification-and-limits), and the [changelog](CHANGELOG.md) for dated changes and unresolved findings.
 
 ## Device identity
 
@@ -18,7 +20,7 @@ Unit A reports board `RTD2851` and hardware/platform `rtd285o`. Its rear label w
 
 ## Connection and baseline
 
-Both units were accessed with authorized ADB over the local network on TCP port 5555, targeting Android user 0. Enable the TV's developer/ADB access as appropriate for its firmware and approve the computer on the TV. Use a trusted network; do not expose ADB to the Internet. The examples below are documentation, not a universal debloat script.
+Use authorized ADB over the local network on TCP port 5555, targeting Android user 0. Enable the TV's developer/ADB access as appropriate for its firmware and approve the computer on the TV. Use a trusted network; do not expose ADB to the Internet. The examples below are documentation, not a universal debloat script.
 
 Replace `<TV_IP>` with the intended TV address. Confirm the physical target as well as its properties: the two tested units have the same fingerprint.
 
@@ -29,7 +31,7 @@ adb -s '<TV_IP>:5555' shell getprop ro.product.board
 adb -s '<TV_IP>:5555' shell getprop ro.build.fingerprint
 adb -s '<TV_IP>:5555' shell getprop ro.software.version_id
 adb -s '<TV_IP>:5555' shell pm list packages -d --user 0
-adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
+adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.HOME
 ```
 
 Record each candidate's `dumpsys package` **User 0** state before changing it. `enabled=0` means manifest/default state; `enabled=1` means explicitly enabled; `enabled=3` means disabled-user. Keep existing component overrides and previously disabled packages intact. A package disabled before this work is not counted as a task change.
@@ -58,7 +60,7 @@ Confirm the resulting screen and physical remote Home behavior. The stock Home r
 
 ## Completed package changes
 
-The following 26 packages were changed from default state (`0`) to disabled-user (`3`) on **both** units. Purpose labels describe the affected feature areas, not proof that every component of a package has only that function. Disable only features you do not use; in particular, retain accessibility, voice, casting, and remote services when needed.
+The following 26 packages are disabled on **both** units, each from original default state (`0`) to disabled-user (`3`). Restore default state when rolling back one of these packages. Purpose labels describe the affected feature areas, not proof that every component of a package has only that function. Retain accessibility, voice, casting, and remote services when needed. Turn off the [screensaver setting](#additional-settings) before disabling its providers.
 
 | Purpose / tradeoff | Exact packages |
 | --- | --- |
@@ -83,9 +85,8 @@ The following 26 packages were changed from default state (`0`) to disabled-user
 | Difference | Unit A | Unit B |
 | --- | --- | --- |
 | `com.google.android.videos` (Google TV/Movies) | Explicitly enabled (`1`) → disabled-user (`3`) | Retained as a streaming app |
-| Final task package disables | 27 | 26 |
-| Final disabled-package total | Not used as a task-change count | 47: 26 task changes + 21 preexisting |
-| `com.tcl.usercenter` | Attempted disable did not persist; returned to default after reboot and was left there | Retained |
+
+Unit B's recorded 47 disabled packages include these 26 changes and 21 preexisting disables outside this cleanup. Leave unrelated preexisting states alone when rolling back; the changelog records the original unit-specific change counts and exceptions.
 
 ### Reproduce one chosen change and restore its original state
 
@@ -115,45 +116,75 @@ adb -s '<TV_IP>:5555' shell am start -n com.google.android.tvlauncher/.MainActiv
 
 If a replacement's accessibility service redirects Home, turn that service off manually when reverting Home. No uninstall or reset is required. Restore other package states individually according to the tables; do not enable all disabled packages indiscriminately.
 
+## Additional optional packages on one reviewed unit
+
+The following three packages are disabled for user 0 on one reviewed Android 11 / `V8-R851T02-LF1V715` (`AR05`) unit. These additions are not established on both historical units, and matching firmware alone does not identify a unit as A or B. Each changed from manifest/default state (`0`) to disabled-user (`3`); package data and existing component overrides were retained.
+
+| Purpose / feature lost | Exact package | Recorded change | Exact package-state rollback |
+| --- | --- | --- | --- |
+| USB copying of retail-demo videos into eSticker resources, with demo-copy status / factory LED integration | `com.tcl.copydatatotv` | 0 → 3 | `pm default-state --user 0 com.tcl.copydatatotv` |
+| Supported USB microphone / karaoke capture, playback mixing, gain and reverb | `com.tcl.micmanager` | 0 → 3 | `pm default-state --user 0 com.tcl.micmanager` |
+| Play auto-install configuration stub; effects on future setup / Play behavior untested | `android.autoinstalls.config.tcl.device` | 0 → 3 | `pm default-state --user 0 android.autoinstalls.config.tcl.device` |
+
+Disable only unused features. MicManager controls audio mixing; verify normal audio after changing it. The Play configuration stub is not an identified background worker, and no speedup was measured for these additions.
+
+For one selected package from this table, record its own User 0 state before changing it:
+
+```sh
+adb -s '<TV_IP>:5555' shell dumpsys package '<PACKAGE_FROM_THIS_TABLE>'
+adb -s '<TV_IP>:5555' shell pm disable-user --user 0 '<PACKAGE_FROM_THIS_TABLE>'
+adb -s '<TV_IP>:5555' shell pm list packages -d --user 0
+# Rollback only that package to its recorded original default state (0):
+adb -s '<TV_IP>:5555' shell pm default-state --user 0 '<PACKAGE_FROM_THIS_TABLE>'
+```
+
+Alternatively, prepend `adb -s '<TV_IP>:5555' shell` to the exact rollback command in the table. Do not substitute `pm enable` or restore all disabled packages. This unit has 50 disabled packages: these three additions plus 47 preexisting disables, all preserved. This is not a revised total for both historical units.
+
+Home selection, keyboard, accessibility, input-filter state, screensaver setting and Netflix AppOp are unchanged by these additions. The [preserved services](#exceptions-and-preserved-services) remain outside this disable list. See [verification limits](#verification-and-limits) before applying these firmware-specific changes elsewhere.
+
 ## Additional settings
 
-Both units changed `secure screensaver_enabled` from `1` to `0`. The screensaver component settings still referenced Backdrop; disabling the providers alone had not changed that configuration. Both also restricted Netflix's `RUN_ANY_IN_BACKGROUND` app-op from no explicit override (effective allow) to `deny`.
+Both units have `secure screensaver_enabled=0`, originally `1`; the selected screensaver still references Backdrop. Turn the setting off before disabling its providers. Both also have Netflix's `RUN_ANY_IN_BACKGROUND` AppOp set to `deny`, originally no explicit override (effective allow).
+
+For rollback, restore the selected Backdrop package to its recorded default state before re-enabling the screensaver setting. This restores one of the disabled packages as a prerequisite, not every screensaver or unrelated package.
 
 ```sh
 # Inspect first and keep your own original values.
 adb -s '<TV_IP>:5555' shell settings --user 0 get secure screensaver_enabled
 adb -s '<TV_IP>:5555' shell cmd appops get --user 0 com.netflix.ninja RUN_ANY_IN_BACKGROUND
-# Changes made on these units:
+# Apply the recorded settings:
 adb -s '<TV_IP>:5555' shell settings --user 0 put secure screensaver_enabled 0
 adb -s '<TV_IP>:5555' shell cmd appops set --user 0 com.netflix.ninja RUN_ANY_IN_BACKGROUND deny
-# Rollback to these units' recorded originals:
+# Rollback: restore the selected provider before enabling the screensaver.
+adb -s '<TV_IP>:5555' shell pm default-state --user 0 com.google.android.backdrop
 adb -s '<TV_IP>:5555' shell settings --user 0 put secure screensaver_enabled 1
 adb -s '<TV_IP>:5555' shell cmd appops set --user 0 com.netflix.ninja RUN_ANY_IN_BACKGROUND default
 ```
 
-Netflix still launched after the restriction. App-ops do not guarantee the absence of cached or other background processes. Do not substitute a global app-op reset for this single-operation rollback.
+AppOps do not guarantee the absence of cached or other background processes. Do not substitute a global AppOp reset for this single-operation rollback.
 
 ## Exceptions and preserved services
 
-- `com.tcl.smartalexa` still had a persistent process despite its disabled package state, including after reboot. It was not uninstalled.
-- `com.tcl.usercenter` reenabled itself on unit A and remained present; it was retained on unit B. It was not uninstalled.
-- `com.tcl.guard`, mixed-function `com.tcl.assistant`, and `com.tcl.xian.StartandroidService` were preserved rather than treating them as isolated advertising packages.
+- A disabled `com.tcl.smartalexa` package state does not establish that its persistent process is absent. No uninstall is part of these instructions.
+- `com.tcl.usercenter` remains enabled and is not part of the rollback list; the changelog records its earlier disable reversal.
+- Keep `com.tcl.guard` outside this disable list: it bundles maintenance, camera/microphone privacy indications, storage warnings, app-launch controls and reporting. No Guard disable was applied.
+- Keep `com.tcl.assistant` and `com.tcl.xian.StartandroidService` outside this disable list. They supply callable TV-control integration and device/account activation with a credential provider, respectively, rather than isolated advertising functions.
 - Core TV/input, settings, configuration, update, audio, DRM, Wi-Fi, Bluetooth, keyboard and physical remote services were preserved. Examples include `com.tcl.tvinput`, `com.tcl.settings`, `com.android.tv.settings`, `com.tcl.providers.config`, `com.tcl.versionUpdateApp`, `com.tcl.systemserver`, and `com.tcl.keycustomfunctionservice`.
 
 No root access, package uninstall, app-data clear, or bootloader changes were used for this cleanup.
 
 ## Verification and limits
 
-**Unit A:** the first 25 final package disables, screensaver setting and Netflix restriction survived an AC power cycle. The later PartnerCustomizer and eSticker disables passed package-state, Settings/YouTube/Netflix launch, Home foreground, and protected-service checks. No reboot after those last two changes is confirmed. Their tests did not establish authenticated playback or physical HDMI/audio functionality. The recorded keyboard and accessibility settings remained unchanged during those checks; an enabled accessibility service was not necessarily bound.
+For the single-unit configuration with the three additional packages disabled, the user confirmed video and sound, HDMI, physical Home and volume buttons worked. This is user-reported functional validation, not an independent playback measurement or a check of every streaming service, HDMI port or remote function. Reboot/wake persistence after these additions remains unverified.
 
-**Unit B:** all 26 task disables persisted after one normal reboot, with a changed boot ID and `sys.boot_completed=1`; all 21 preexisting disabled packages remained disabled. Home resolution, the replacement Home's bound accessibility service, keyboard state, `screensaver_enabled=0`, and Netflix's app-op restriction persisted. Settings, Netflix, YouTube, Disney+, HBO Max, ViX and Google TV/Movies launched successfully. Prime Video initially timed out, then passed a bounded launch recheck with its activity in the foreground. Audio, Widevine/PlayReady, Wi-Fi, Bluetooth, physical remote and TV input processes were present, with HDMI ports 1–4 registered. No fatal exception entries appeared in the retained crash-buffer sample. The user confirmed audio/video worked generally; this does not independently verify every HDMI port, remote function, DRM path or streaming service's playback.
+The [changelog](CHANGELOG.md) records earlier unit-specific persistence checks and ADB observations. Those checkpoints do not validate the later additions. Verify the TV functions you use after each selected change, and test reboot/wake behavior separately.
 
 Useful read-only checks after a selected change:
 
 ```sh
 adb -s '<TV_IP>:5555' shell pm list packages -d --user 0
 adb -s '<TV_IP>:5555' shell dumpsys package com.google.android.feedback
-adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
+adb -s '<TV_IP>:5555' shell cmd package resolve-activity --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.HOME
 adb -s '<TV_IP>:5555' shell settings --user 0 get secure default_input_method
 adb -s '<TV_IP>:5555' shell dumpsys tv_input
 adb -s '<TV_IP>:5555' shell getprop sys.boot_completed
