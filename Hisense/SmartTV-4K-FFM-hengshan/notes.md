@@ -1,6 +1,8 @@
 # Hisense SmartTV 4K FFM / hengshan platform
 
-Completed investigation and partial cleanup results recorded on 2026-10-18. This is a platform identifier from ADB, **not a confirmed retail model**. These notes describe the completed four-package cleanup and launcher investigation checkpoint; they do not declare the entire TV setup complete.
+Starting-point reference for the tested firmware: 32 optional packages disabled, screensaver off, and stock Vanilla Home retained. This is a platform identifier from ADB, **not a confirmed retail model**. Disable only features you do not use; these instructions are not a universal safe-disable list.
+
+Go to [disabled services](#disabled-services), [screensaver settings](#screensaver-setting), or [streaming apps](#streaming-apps) for commands and rollback. The [changelog](CHANGELOG.md) records changes and discoveries separately.
 
 ## Device identity and connection
 
@@ -16,7 +18,7 @@ Completed investigation and partial cleanup results recorded on 2026-10-18. This
 | Mode | Basic TV |
 | Fingerprint | `Hisense/hengshan/hengshan:12/STT2.230310.002/00.00.00.132:user/release-keys` |
 
-The connection used authorized local-network ADB over TCP port 5555, Android user 0. Replace `<TV_IP>` with the intended TV address and verify the target before using any example. Record original package and component states first; these examples are not a blanket safe-disable list.
+Use authorized local-network ADB over TCP port 5555, targeting Android user 0. Replace `<TV_IP>` with the intended TV address and verify the target before using any example. Record original package and component states first; rollback values below belong to this unit and may differ on another TV.
 
 ```sh
 adb connect '<TV_IP>:5555'
@@ -105,9 +107,11 @@ Removal rollback, not executed: reinstall a verified APK with the same signing i
 
 No third-party debloat code was run.
 
-## Completed package changes
+## Disabled services
 
 State `0` means manifest/default state, `1` explicitly enabled, and `3` disabled-user. Package-level `disable-user` retains the installed package and its data; it is not an uninstall. Preserve original component overrides and unrelated preexisting disabled packages.
+
+All 32 packages below are disabled in the recorded configuration. Each was originally at default state (`0`), which is the rollback target. Before disabling DreamX, turn off the [screensaver setting](#screensaver-setting).
 
 | Purpose | Exact package | Recorded change | Exact package-state rollback |
 | --- | --- | --- | --- |
@@ -115,34 +119,89 @@ State `0` means manifest/default state, `1` explicitly enabled, and `3` disabled
 | Google feedback | `com.google.android.feedback` | 0 → 3 | `pm default-state --user 0 com.google.android.feedback` |
 | Hisense Channels streaming / search / dedicated-button integration | `net.vidaatv.hisense.android.tv` | 0 → 3 | `pm default-state --user 0 net.vidaatv.hisense.android.tv` |
 | Alexa TV control / setup | `com.vt.alexa` | 0 → 3 | `pm default-state --user 0 com.vt.alexa` |
+| Google Calendar synchronization | `com.google.android.syncadapters.calendar` | 0 → 3 | `pm default-state --user 0 com.google.android.syncadapters.calendar` |
+| Android printing | `com.android.printspooler` | 0 → 3 | `pm default-state --user 0 com.android.printspooler` |
+| TalkBack and Switch Access | `com.google.android.marvin.talkback` | 0 → 3 | `pm default-state --user 0 com.google.android.marvin.talkback` |
+| Family Moment photo / camera / screensaver features | `com.vt.hishow` | 0 → 3 | `pm default-state --user 0 com.vt.hishow` |
+| BT Music mode | `com.vt.tv.singlelisten` | 0 → 3 | `pm default-state --user 0 com.vt.tv.singlelisten` |
+| Basic alternative screensavers | `com.android.dreams.basic` | 0 → 3 | `pm default-state --user 0 com.android.dreams.basic` |
+| Google speech synthesis, recognition and voice input | `com.google.android.tts` | 0 → 3 | `pm default-state --user 0 com.google.android.tts` |
+| Google TV remote / keyboard / search integration | `com.google.android.tv.remote.service` | 0 → 3 | `pm default-state --user 0 com.google.android.tv.remote.service` |
+| Ambient Mode / Backdrop and associated features | `com.google.android.apps.tv.dreamx` | 0 → 3 | `pm default-state --user 0 com.google.android.apps.tv.dreamx` |
+| Hisense OEM-tab content | `com.vidaa.oemtabcontentprovider` | 0 → 3 | `pm default-state --user 0 com.vidaa.oemtabcontentprovider` |
+| Store / demo mode and its SyncPlay service | `com.vt.storemode` | 0 → 3 | `pm default-state --user 0 com.vt.storemode` |
+| B2B LAN / serial control | `com.vt.tv.b2b` | 0 → 3 | `pm default-state --user 0 com.vt.tv.b2b` |
+| Play auto-install configuration | `android.autoinstalls.config.google.gtvpai` | 0 → 3 | `pm default-state --user 0 android.autoinstalls.config.google.gtvpai` |
+| DLNA content sharing | `com.vt.tv.dlna` | 0 → 3 | `pm default-state --user 0 com.vt.tv.dlna` |
+| Media Center / USB playback / DLNA sharing controls | `com.vt.tv.mediacenter` | 0 → 3 | `pm default-state --user 0 com.vt.tv.mediacenter` |
+| Screen Casting / Miracast and related connection screens | `com.vt.tv.mobiledeviceconnectiontips` | 0 → 3 | `pm default-state --user 0 com.vt.tv.mobiledeviceconnectiontips` |
+| AIOT smart-home integration | `com.vt.tv.aiot` | 0 → 3 | `pm default-state --user 0 com.vt.tv.aiot` |
+| AIOT IP control and device allow/deny lists | `com.vt.tv.aiotprotocolapp` | 0 → 3 | `pm default-state --user 0 com.vt.tv.aiotprotocolapp` |
+| AIOT power / volume / source control bridge | `com.vt.tv.aiotsystemservice` | 0 → 3 | `pm default-state --user 0 com.vt.tv.aiotsystemservice` |
+| Camera gestures and camera-assisted picture / audio features | `com.vt.tv.ai_sense` | 0 → 3 | `pm default-state --user 0 com.vt.tv.ai_sense` |
+| SyncPlay discovery server | `com.vt.udpserver` | 0 → 3 | `pm default-state --user 0 com.vt.udpserver` |
+| Hisense Home partner configuration / favorites / recommendations | `com.vt.tv.customerlauncher` | 0 → 3 | `pm default-state --user 0 com.vt.tv.customerlauncher` |
+| Calman external display-calibration connector | `com.vt.tv.calmanconnector` | 0 → 3 | `pm default-state --user 0 com.vt.tv.calmanconnector` |
+| Ginga broadcast-interactive applications | `tv.mopa.ginga` | 0 → 3 | `pm default-state --user 0 tv.mopa.ginga` |
+| ATSC3 broadcast interaction | `com.vt.tv.interactive` | 0 → 3 | `pm default-state --user 0 com.vt.tv.interactive` |
+| Device Assistant cleanup / app management / diagnostics | `com.vt.tv.protector` | 0 → 3 | `pm default-state --user 0 com.vt.tv.protector` |
+| Storage-full / storage-protection / USB-storage prompts | `com.vt.tv.smartsense.ui` | 0 → 3 | `pm default-state --user 0 com.vt.tv.smartsense.ui` |
+| Vendor web-page viewer, separate from the shared WebView engine | `com.mediatek.support.webview` | 0 → 3 | `pm default-state --user 0 com.mediatek.support.webview` |
+
+### Disable one selected package and roll it back
+
+Substitute one exact package from the table for `<PACKAGE_FROM_TABLE>`. Record its own User 0 state first; the rollback below applies to the recorded default state on this unit.
+
+```sh
+adb -s '<TV_IP>:5555' shell dumpsys package '<PACKAGE_FROM_TABLE>'
+adb -s '<TV_IP>:5555' shell pm disable-user --user 0 '<PACKAGE_FROM_TABLE>'
+adb -s '<TV_IP>:5555' shell pm list packages -d --user 0
+# Rollback to the recorded default state (0):
+adb -s '<TV_IP>:5555' shell pm default-state --user 0 '<PACKAGE_FROM_TABLE>'
+```
+
+Alternatively, prepend `adb -s '<TV_IP>:5555' shell` to a rollback command in the table. Do not use `pm enable` as a substitute for `pm default-state`: explicit enabled state (`1`) is different from the recorded default (`0`). Do not enable all disabled packages indiscriminately.
+
+Re-enabling speech or accessibility packages does not by itself select their engine or services; review those settings deliberately when restoring the features.
+
+## Screensaver setting
+
+The recorded `secure screensaver_enabled` value changed from `1` to `0`. Turn it off before disabling `com.google.android.apps.tv.dreamx`:
+
+```sh
+adb -s '<TV_IP>:5555' shell settings --user 0 get secure screensaver_enabled
+adb -s '<TV_IP>:5555' shell settings --user 0 put secure screensaver_enabled 0
+```
+
+The component preference was left at `com.google.android.apps.tv.dreamx/.service.Backdrop`. To roll back, restore the package before restoring the screensaver setting:
+
+```sh
+adb -s '<TV_IP>:5555' shell pm default-state --user 0 com.google.android.apps.tv.dreamx
+adb -s '<TV_IP>:5555' shell settings --user 0 put secure screensaver_enabled 1
+```
+
+## Streaming apps
+
+YouTube, Prime Video and Disney+ are explicitly enabled in this configuration. They were previously disabled; the rollback column below restores that earlier state only if desired. It is not part of undoing the disabled-service list.
+
+| Purpose | Exact package | Recorded change | Exact package-state rollback |
+| --- | --- | --- | --- |
 | Restore YouTube access | `com.google.android.youtube.tv` | 3 → 1 | `pm disable-user --user 0 com.google.android.youtube.tv` |
 | Restore Prime Video access | `com.amazon.amazonvideo.livingroom` | 3 → 1 | `pm disable-user --user 0 com.amazon.amazonvideo.livingroom` |
 | Restore Disney+ access | `com.disney.disneyplus` | 3 → 1 | `pm disable-user --user 0 com.disney.disneyplus` |
 
-Netflix (`com.netflix.ninja`) remained enabled. Restoring the original state of the three streaming apps means disabling them again, not resetting their data. The four confirmed optional-package disables are ACR, Google feedback, Hisense Channels and Alexa. Channels and Alexa were tested individually after the earlier two-package cleanup.
-
-Disabling Channels removes its streaming service and related search/button integration; disabling Alexa removes its TV voice-control/setup feature. The [official exact-package Channels listing](https://play.google.com/store/apps/details?id=net.vidaatv.hisense.android.tv) describes advertising-supported live and on-demand streaming. The [Hisense Alexa guide](https://assets.hisense-usa.com/assets/ProductDownloads/46/3d89c6aa49/How-to-set-up-Amazon-Alexa-on-Hisense-TVs_0.pdf) corroborates the general TV-control role on older models, not this exact firmware. Local package metadata identified the installed packages; neither source establishes a universal safe-disable recommendation.
-
-For one reviewed package at a time, prepend `adb -s '<TV_IP>:5555' shell` to a rollback command in the table. Examples of the completed changes and inspection:
+To reproduce a restore, substitute its package below. Prepend the same ADB target and `shell` prefix to its rollback command in the table.
 
 ```sh
-adb -s '<TV_IP>:5555' shell dumpsys package com.vt.tv.evservice
-adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.vt.tv.evservice
-adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.google.android.feedback
-adb -s '<TV_IP>:5555' shell pm disable-user --user 0 net.vidaatv.hisense.android.tv
-adb -s '<TV_IP>:5555' shell pm disable-user --user 0 com.vt.alexa
-adb -s '<TV_IP>:5555' shell pm enable --user 0 com.google.android.youtube.tv
-adb -s '<TV_IP>:5555' shell pm enable --user 0 com.amazon.amazonvideo.livingroom
-adb -s '<TV_IP>:5555' shell pm enable --user 0 com.disney.disneyplus
-adb -s '<TV_IP>:5555' shell pm list packages -d --user 0
+adb -s '<TV_IP>:5555' shell pm enable --user 0 '<STREAMING_PACKAGE_FROM_TABLE>'
 ```
 
-## Preserved functionality and verification limits
+Netflix (`com.netflix.ninja`) remains enabled.
 
-AirPlay package states were preserved exactly: `com.mediatek.AirplayAPK=1`, `com.mediatek.airplaydaemon=0`, `com.mediatek.partner.airplay_sys=0`, and `com.vt.tv.airplaykeycheck=0`. AirPlay system/daemon services were observed after the changes and reboot. DLNA, SyncPlay, AIOT, native audio/input/network services and DRM support were retained. Stock launcher, Setup Wizard and Settings remained at default state; Home still resolved to Vanilla. No additional optional-package changes beyond the four listed disables are claimed.
+## Packages left unchanged
 
-YouTube, Prime Video and Disney+ returned successful launch status before and after the two-package disable batch; Netflix and Settings also launched. One normal reboot verified persistence of the earlier ACR and feedback disables, streaming-app enabled states, preserved AirPlay states and bound accessibility. Core audio, input, TV, Settings and remote services were observed; these process checks are not full functional tests.
+Keep stock Home, Setup Wizard, Settings, System UI, Play Services/GSF, keyboard, Bluetooth/Wi-Fi, shared Google WebView, TV/input/audio/DRM services and TV/remote firmware updates outside this disable list. The mixed-function `com.vt.tv.smartsense` and `com.vt.tv.smartservice` packages remain enabled; they are distinct from the disabled storage-prompt UI.
 
-After each later Channels/Alexa disable, Netflix, YouTube, Prime Video and Disney+ launched successfully. An explicit Settings activity launch reported a stock-launcher account-verification activity; the normal `android.settings.SETTINGS` action then reached MainSettings, confirmed in the foreground. No login or provisioning action was performed, and the cause of that transient activity is unestablished. AirPlay services remained running, ADB stayed responsive, and HDMI/eARC, audio, input, remote, Wi-Fi and DRM services/endpoints were present. **The latest Channels and Alexa disables have no reboot persistence or standby/wake retest.**
+AirPlay and its key-provisioning package states were left unchanged: `com.mediatek.AirplayAPK=1`, `com.mediatek.airplaydaemon=0`, `com.mediatek.partner.airplay_sys=0`, `com.vt.tv.airplaykeycheck=0`, and `com.vt.edv.drmp=0`. Disabling `com.vt.tv.mobiledeviceconnectiontips` also removes an AirPlay-related entry screen; retaining the core packages does not establish that every AirPlay workflow remains available.
 
-Physical Home failure was user-confirmed, but authenticated streaming playback, audio, HDMI switching, and AirPlay discovery/streaming were not comprehensively verified in this checkpoint. No measured speedup, removal of all tracking/ads, or elimination of all background processes is claimed. The debloat changes used disable-user without uninstall or data clear. The replacement launcher alone was subsequently uninstalled for user 0 with the keep-data option, as documented above.
+The recorded configuration has 38 disabled packages: the 32 listed services plus six preexisting disables outside this cleanup: `com.android.providers.calendar`, `com.android.vending`, `com.hisense.odinbrowser`, `com.mediatek.dtv.tvinput.dvbtuner`, `com.mediatek.dtv.tvinput.isdbtuner`, and `com.mediatek.tis`. Leave these preexisting states alone when rolling back the changes above.
