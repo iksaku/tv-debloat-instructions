@@ -5,6 +5,7 @@ Verified, reversible TV cleanup notes, organized by manufacturer and model or cl
 - [TCL BeyondTV / RT2851 platform — two tested units](TCL/BeyondTV-RT2851/notes.md)
 - [TCL UnionTV / RT2841 platform — Android 9 cleanup reference](TCL/UnionTV-RT2841/notes.md)
 - [Hisense SmartTV 4K FFM / hengshan platform — cleanup reference](Hisense/SmartTV-4K-FFM-hengshan/notes.md)
+- [SkyworthDigital YYT / HP46BY4 platform — Android projector cleanup reference](SkyworthDigital/YYT-HP46BY4/notes.md)
 
 Optional targets include recommendations, vendor promotional features, and unused casting, voice, or bundled apps. Features and package states vary: review the device notes before changing anything.
 
